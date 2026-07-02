@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hive Tribes • Voting Power Dashboard</title>
+<style>
+  :root{
+    --bg-0:#0a0e14;
+    --bg-1:#10151f;
+    --bg-2:#161c29;
+    --card:#141a26;
+    --card-border:#232b3d;
+    --accent:#5ee7c6;
+    --accent-2:#8b7cf6;
+    --accent-warn:#f6c667;
+    --accent-danger:#f6746e;
+    --text-hi:#eef1f8;
+    --text-mid:#a4adc4;
+    --text-low:#5f6b85;
+    --radius:14px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(139,124,246,0.12), transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, rgba(94,231,198,0.10), transparent 55%),
+      var(--bg-0);
+    color:var(--text-hi);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    padding: 16px 12px 60px;
+  }
+  .wrap{ max-width: 980px; margin: 0 auto; }
+
+  header.top{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    flex-wrap:wrap; margin-bottom: 22px;
+  }
+  header.top h1{
+    font-size: 20px; margin:0; letter-spacing:0.2px; font-weight:700;
+    display:flex; align-items:center; gap:10px;
+  }
+  header.top h1 .logo{
+    width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px; font-weight:800; color:#0a0e14;
+  }
+  header.top p.sub{ margin:2px 0 0; font-size:12.5px; color:var(--text-low); }
+
+  .card{
+    background: linear-gradient(180deg, var(--card), var(--bg-1));
+    border:1px solid var(--card-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .panel{ padding:18px 18px; margin-bottom:18px; }
+  .panel-title{ font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-low); margin:0 0 12px; font-weight:700; }
+
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .field{ display:flex; flex-direction:column; gap:6px; flex:1; min-width:150px; }
+  .field label{ font-size:11.5px; color:var(--text-mid); font-weight:600; }
+  input[type=text], select{
+    background: var(--bg-2);
+    border:1px solid var(--card-border);
+    color:var(--text-hi);
+    padding:12px 14px;
+    border-radius:10px;
+    font-size:14px;
+    outline:none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    height: 46px; /* Optimized height for mobile tap target */
+  }
+  input[type=text]:focus, select:focus{
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(94,231,198,0.15);
+  }
+  input[type=text]::placeholder{ color: var(--text-low); }
+
+  button{
+    cursor:pointer; border:none; border-radius:10px; font-weight:700; font-size:13.5px;
+    padding:12px 18px; transition: transform .12s ease, filter .12s ease, opacity .12s ease;
+    display:inline-flex; align-items:center; gap:8px; justify-content: center;
+    height: 46px; /* Optimized mobile tap height */
+    touch-action: manipulation;
+  }
+  button:active{ transform: scale(0.97); }
+  button:disabled{ opacity:0.5; cursor:not-allowed; transform:none; }
+
+  .btn-primary{ background: linear-gradient(135deg,var(--accent),#3fd9b0); color:#06110d; }
+  .btn-primary:hover:not(:disabled){ filter:brightness(1.08); }
+
+  .btn-ghost{ background: var(--bg-2); color:var(--text-hi); border:1px solid var(--card-border); }
+  .btn-ghost:hover:not(:disabled){ border-color:var(--accent); color:var(--accent); }
+
+  .btn-icon{
+    background: var(--bg-2); border:1px solid var(--card-border); color:var(--text-mid);
+    width:42px; height:42px; padding:0; border-radius:9px; justify-content:center;
+  }
+  .btn-icon:hover:not(:disabled){ color:var(--accent); border-color:var(--accent); }
+  .btn-icon.danger:hover:not(:disabled){ color:var(--accent-danger); border-color:var(--accent-danger); }
+
+  .btn-sm{ padding:8px 10px; font-size:12px; white-space:nowrap; height: auto; }
+  
+  .vwm-block{ margin-top:12px; padding-top:10px; border-top:1px dashed var(--card-border); }
+  .vwm-hint{ font-size:10px; color:var(--text-low); margin-top:5px; line-height:1.4; }
+  .vwm-input{ width:70px !important; padding:8px 10px !important; height: 38px !important; }
+
+  .spin{ animation: spin 0.9s linear infinite; display:inline-block; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .toolbar-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+  .tabs{ display:flex; gap:10px; margin-bottom: 20px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .tab-btn{ background: transparent; border: 1px solid transparent; color: var(--text-mid); font-size: 14px; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  .tab-btn.active{ background: var(--bg-2); color: var(--accent); border-color: var(--card-border); }
+  
+  .grid{ display:none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:14px; }
+  .grid.active{ display:grid; }
+
+  /* NAVIGATION VIEW SECTIONS */
+  .view-section{ display: none; }
+  .view-section.active{ display: block; }
+
+  .tribe-card{ padding:16px; position:relative; overflow:hidden; display: flex; flex-direction: column; }
+  .tribe-card::before{
+    content:""; position:absolute; inset:0 0 auto 0; height:3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    opacity:0.9;
+  }
+  .tribe-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .tribe-symbol{ font-size:18px; font-weight:800; letter-spacing:0.03em; }
+  .tribe-api-badge{
+    font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+    padding:3px 7px; border-radius:6px; color:#0a0e14;
+  }
+  .badge-scot{ background: var(--accent-warn); }
+  .badge-smt{ background: var(--accent); }
+  .badge-unknown{ background: var(--text-low); color:var(--text-hi); }
+
+  .tribe-name{ font-size:11.5px; color:var(--text-mid); margin:-8px 0 12px; min-height:14px; }
+
+  .vp-block{ margin-bottom:10px; }
+  .vp-label-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+  .vp-label{ font-size:11px; color:var(--text-mid); font-weight:600; }
+  .vp-value{ font-size:16px; font-weight:800; }
+  .vp-value.na{ color:var(--text-low); font-weight:600; font-size:12.5px; }
+  .bar-track{ height:8px; border-radius:5px; background:var(--bg-2); overflow:hidden; border:1px solid var(--card-border); }
+  .bar-fill{ height:100%; border-radius:5px; transition: width .4s ease; }
+  .bar-fill.up{ background: linear-gradient(90deg,var(--accent),#3fd9b0); }
+  .bar-fill.down{ background: linear-gradient(90deg,var(--accent-danger),#c8514c); }
+
+  /* TOKENS STATS GRID (SCOT EXCLUSIVE) */
+  .token-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin: 8px 0 14px 0;
+    padding: 8px;
+    background: var(--bg-0);
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+  }
+  .stat-item {
+    font-size: 11px;
+    color: var(--text-hi);
+    text-align: center;
+    font-weight: 700;
+  }
+  .stat-item span {
+    display: block;
+    font-size: 9px;
+    color: var(--text-low);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+    font-weight: 600;
+  }
+
+  .meta-row{ display:flex; justify-content:space-between; align-items:center; margin-top:auto; padding-top:12px; border-top:1px dashed var(--card-border); }
+  .meta-text{ font-size:10.5px; color:var(--text-low); }
+  .meta-actions{ display:flex; gap:6px; }
+
+  .status-line{ font-size:11px; margin-top:4px; }
+  .status-line.err{ color:var(--accent-danger); }
+  .status-line.ok{ color:var(--text-low); }
+
+  details.raw{ margin-top:12px; background: var(--bg-2); padding: 8px; border-radius: 8px; border: 1px solid var(--card-border); }
+  details.raw summary{ font-size:11px; color:var(--accent); font-weight: bold; cursor:pointer; user-select:none; outline: none; }
+  details.raw pre{
+    font-size:10px; background:var(--bg-0); border-radius:6px;
+    padding:8px; max-height:150px; overflow:auto; color:var(--text-mid); margin-top:8px;
+    white-space:pre-wrap; word-break:break-word;
+  }
+
+  /* DETALHES DAS CONFIGS */
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .cfg-item { background: var(--bg-0); padding: 6px; border-radius: 6px; font-size: 11px; color: var(--text-hi); border: 1px solid var(--card-border); }
+  .cfg-item span { color: var(--text-mid); display: block; font-size: 9px; text-transform: uppercase; margin-bottom: 2px; }
+
+  .empty-state{ text-align:center; padding:40px 20px; color:var(--text-low); font-size:13.5px; }
+  .empty-state b{ color:var(--text-mid); }
+
+  .skeleton{
+    background: linear-gradient(90deg, var(--bg-2) 25%, var(--card-border) 37%, var(--bg-2) 63%);
+    background-size: 400% 100%; animation: shimmer 1.4s ease infinite; border-radius:6px;
+  }
+  @keyframes shimmer{ 0%{background-position:100% 50%;} 100%{background-position:0 50%;} }
+
+  .search-container { margin-bottom: 20px; }
+  .directory-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .directory-item { padding: 14px; display: flex; flex-direction: column; gap: 8px; justify-content: space-between; }
+  .directory-head { display: flex; justify-content: space-between; align-items: center; }
+  .dir-tabs { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px dashed var(--card-border); padding-bottom: 8px; }
+  .dir-tab-btn { background: var(--bg-0); border: 1px solid var(--card-border); color: var(--text-mid); padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; }
+  .dir-tab-btn.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+
+  footer.note{ text-align:center; color:var(--text-low); font-size:11px; margin-top:26px; line-height:1.6; }
+  footer.note a{ color: var(--accent); text-decoration:none; }
+
+  @media (max-width: 600px) {
+    body {
+      padding: 12px 8px 40px;
+    }
+    header.top {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .toolbar-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .toolbar-right .field {
+      flex: 1;
+    }
+    .row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .field {
+      max-width: 100% !important;
+      min-width: unset;
+    }
+    button, input[type=text], select {
+      width: 100% !important;
+    }
+    .tabs {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+    .tab-btn {
+      width: 100%;
+      text-align: center;
+    }
+    #navDirectoryBtn {
+      margin-left: 0 !important;
+    }
+    .token-stats-grid {
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 4px;
+    }
+    .stat-item span {
+      display: inline;
+      margin-bottom: 0;
+    }
+  }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--card-border); border-radius:6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1><span class="logo">HE</span> Voting Power Dashboard</h1>
+      <p class="sub">Monitor real-time regenerated Voting Power and staked balances for Hive Engine tribes</p>
+    </div>
+    <div class="toolbar-right">
+      <div class="field" style="min-width:130px;">
+        <label for="cacheTtl">Cache Duration</label>
+        <select id="cacheTtl"></select>
+      </div>
+      <button class="btn-primary" id="refreshAllBtn">
+        <span id="refreshAllIcon">⟳</span> Refresh All
+      </button>
+    </div>
+  </header>
+
+  <!-- HIVE ACCOUNT PANEL -->
+  <div class="card panel">
+    <p class="panel-title">Hive Account</p>
+    <div class="row">
+      <div class="field" style="max-width:260px;">
+        <label for="accountInput">Username</label>
+        <input type="text" id="accountInput" placeholder="e.g. faireye" autocomplete="off">
+      </div>
+      <button class="btn-ghost" id="saveAccountBtn">Save Account</button>
+    </div>
+  </div>
+
+  <!-- MANUAL TRIBE PANEL -->
+  <div class="card panel">
+    <p class="panel-title">Add Tribe Manually</p>
+    <div class="row">
+      <div class="field" style="max-width:160px;">
+        <label for="symbolInput">Token Symbol</label>
+        <input type="text" id="symbolInput" placeholder="e.g. LEO, POB, BEE" autocomplete="off">
+      </div>
+      <div class="field" style="max-width:170px;">
+        <label for="apiHintInput">API Endpoint Hint</label>
+        <select id="apiHintInput">
+          <option value="">Auto-detect</option>
+          <option value="scot">SCOT (Legacy)</option>
+          <option value="smt">SMT (Smart Contracts)</option>
+        </select>
+      </div>
+      <button class="btn-primary" id="addTribeBtn">+ Add Tribe</button>
+    </div>
+  </div>
+
+  <!-- MAIN MENU TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" data-view="dashboard-view" data-target="grid-scot">SCOT Tokens</button>
+    <button class="tab-btn" data-view="dashboard-view" data-target="grid-smt">SMT Tokens</button>
+    <button class="tab-btn" id="navDirectoryBtn" data-view="directory-view" style="margin-left: auto; color: var(--accent-2); border-color: rgba(139,124,246,0.2);">🌐 All Tribes Directory</button>
+  </div>
+
+  <!-- VIEW SECTIONS -->
+  <div id="dashboard-view" class="view-section active">
+    <div id="grid-scot" class="grid active"></div>
+    <div id="grid-smt" class="grid"></div>
+
+    <div id="emptyState" class="empty-state" style="display:none;">
+      No tokens tracked yet.<br>
+      Add a symbol above, or jump into the <b>All Tribes Directory</b> to explore and add active tokens.
+    </div>
+  </div>
+
+  <!-- DIRECTORY SECTION (SEPARATE PAGE) -->
+  <div id="directory-view" class="view-section">
+    <div class="card panel search-container">
+      <p class="panel-title">Explore Global Token Registries</p>
+      <div class="row">
+        <div class="field">
+          <label for="dirSearchInput">Search Directory Catalog</label>
+          <input type="text" id="dirSearchInput" placeholder="Filter tokens by symbol name or descriptors..." autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <!-- Separation tabs specifically within directory -->
+    <div class="dir-tabs">
+      <button class="dir-tab-btn active" data-filter="all">All Registries</button>
+      <button class="dir-tab-btn" data-filter="scot">SCOT Network Only</button>
+      <button class="dir-tab-btn" data-filter="smt">SMT Network Only</button>
+    </div>
+
+    <div id="directoryList" class="directory-list"></div>
+  </div>
+
+  <footer class="note">
+    Legacy Tribes (SCOT) run on <a href="https://scot-api.hive-engine.com" target="_blank" rel="noopener">scot-api</a> microservices.<br>
+    Modern Tribes (SMT) read voting powers directly from the native contract state via
+    <a href="https://api.hive-engine.com" target="_blank" rel="noopener">Hive Engine RPC</a>.<br>
+    Use <a href="https://hive-keychain.com" target="_blank" rel="noopener">Hive Keychain</a> extension to modify your Vote Weight Multipliers (SCOT exclusive).
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Configs and API Endpoints ----------
+  const SCOT_API = "https://scot-api.hive-engine.com";
+  const SMT_API  = "https://smt-api.enginerpc.com";
+
+  const KNOWN_SMT  = ["BEE","VYB","PAL","VOTE","MEME","CENT","BYTE","SCP","DUNK","BEATCZ"];
+  const KNOWN_SCOT = ["POB","LEO","CCC","CTP","PAY","ARCHON","SPT","PHOTO","PIMP","ALIVE","ASH"];
+
+  const STORAGE_ACCOUNT = "hepv_account_v3";
+  const STORAGE_TRIBES  = "hepv_tribes_v3";
+  const STORAGE_CACHE   = "hepv_cache_v3";
+  const STORAGE_TTL     = "hepv_ttl_v3";
+
+  const TTL_OPTIONS = [
+    { label: "1 minute",   ms: 1 * 60 * 1000 },
+    { label: "5 minutes",  ms: 5 * 60 * 1000 },
+    { label: "15 minutes", ms: 15 * 60 * 1000 },
+    { label: "30 minutes", ms: 30 * 60 * 1000 },
+  ];
+
+  // ---------- State Management ----------
+  let account = localStorage.getItem(STORAGE_ACCOUNT) || "";
+  let tribes = safeParse(localStorage.getItem(STORAGE_TRIBES), []);
+  let cache = safeParse(localStorage.getItem(STORAGE_CACHE), {});
+  let ttlMs = parseInt(localStorage.getItem(STORAGE_TTL), 10) || TTL_OPTIONS[1].ms;
+  
+  // Local Memory Cache Pools to prevent multi-call /info?token= requests
+  let globalConfigs = { scot: [], smt: [] };
+  let globalTokenInfos = { scot: {}, smt: {} };
+  let activeDirectoryFilter = "all";
+
+  function safeParse(str, fallback){
+    try{ const v = JSON.parse(str); return v == null ? fallback : v; } catch(e){ return fallback; }
+  }
+  function persistAccount(){ localStorage.setItem(STORAGE_ACCOUNT, account); }
+  function persistTribes(){ localStorage.setItem(STORAGE_TRIBES, JSON.stringify(tribes)); }
+  function persistCache(){ localStorage.setItem(STORAGE_CACHE, JSON.stringify(cache)); }
+  function persistTtl(){ localStorage.setItem(STORAGE_TTL, String(ttlMs)); }
+  function cacheKey(sym, acc){ return acc.toLowerCase() + ":" + sym.toUpperCase(); }
+
+  // ---------- DOM References ----------
+  const accountInput = document.getElementById("accountInput");
+  const saveAccountBtn = document.getElementById("saveAccountBtn");
+  const symbolInput = document.getElementById("symbolInput");
+  const apiHintInput = document.getElementById("apiHintInput");
+  const addTribeBtn = document.getElementById("addTribeBtn");
+  const gridScot = document.getElementById("grid-scot");
+  const gridSmt = document.getElementById("grid-smt");
+  const emptyState = document.getElementById("emptyState");
+  const refreshAllBtn = document.getElementById("refreshAllBtn");
+  const refreshAllIcon = document.getElementById("refreshAllIcon");
+  const cacheTtlSelect = document.getElementById("cacheTtl");
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const dirSearchInput = document.getElementById("dirSearchInput");
+  const directoryList = document.getElementById("directoryList");
+  const dirTabBtns = document.querySelectorAll('.dir-tab-btn');
+
+  accountInput.value = account;
+
+  TTL_OPTIONS.forEach(opt => {
+    const o = document.createElement("option");
+    o.value = opt.ms; o.textContent = opt.label;
+    if (opt.ms === ttlMs) o.selected = true;
+    cacheTtlSelect.appendChild(o);
+  });
+
+  // ---------- Tab Navigation Switcher ----------
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      
+      const targetView = e.target.dataset.view;
+      document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+      document.getElementById(targetView).classList.add('active');
+
+      if(targetView === "dashboard-view" && e.target.dataset.target) {
+        document.querySelectorAll('.grid').forEach(g => g.classList.remove('active'));
+        document.getElementById(e.target.dataset.target).classList.add('active');
+      }
+    });
+  });
+
+  // Directory sub-filtering listener
+  dirTabBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      dirTabBtns.forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      activeDirectoryFilter = e.target.dataset.filter;
+      renderDirectory();
+    });
+  });
+
+  // ---------- Optimized Fetch Engines (In bulk / unified) ----------
+  async function fetchJson(url){
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  async function postJson(url, body){
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message || "RPC error");
+    return json.result;
+  }
+
+  async function loadBulkMetadataAndConfigs() {
+    try {
+      const [scotCfg, smtCfg, scotInfo, smtInfo] = await Promise.all([
+        fetchJson(`${SCOT_API}/config`),
+        fetchJson(`${SMT_API}/config`),
+        fetchJson(`${SCOT_API}/info`),
+        fetchJson(`${SMT_API}/info`)
+      ]);
+
+      globalConfigs.scot = Array.isArray(scotCfg) ? scotCfg : [];
+      globalConfigs.smt = Array.isArray(smtCfg) ? smtCfg : [];
+      
+      // Parse token descriptive arrays into accessible dictionaries
+      if (Array.isArray(scotInfo)) {
+        scotInfo.forEach(i => { if(i.symbol) globalTokenInfos.scot[i.symbol.toUpperCase()] = i; });
+      } else if (scotInfo && typeof scotInfo === "object") {
+        globalTokenInfos.scot = scotInfo; 
+      }
+
+      if (Array.isArray(smtInfo)) {
+        smtInfo.forEach(i => { if(i.symbol) globalTokenInfos.smt[i.symbol.toUpperCase()] = i; });
+      } else if (smtInfo && typeof smtInfo === "object") {
+        globalTokenInfos.smt = smtInfo;
+      }
+
+      renderDirectory();
+    } catch (e) {
+      console.warn("Unified batch indexing failure initialization error", e);
+    }
+  }
+
+  function looksLikeValidAccountData(data, acc){
+    if (!data || typeof data !== "object") return false;
+    const nameField = data.account || data.name || data.username;
+    if (nameField && String(nameField).toLowerCase() === acc.toLowerCase()) return true;
+    return Object.keys(data).length > 0 && (
+      "voting_power" in data || "votingPower" in data || "vp" in data ||
+      "balance" in data || "stake" in data
+    );
+  }
+
+  function unwrapScotResponse(data, sym, acc){
+    if (!data || typeof data !== "object") return null;
+    const upper = sym.toUpperCase();
+    if (data[upper] && typeof data[upper] === "object") return data[upper];
+    const foundKey = Object.keys(data).find(k => k.toUpperCase() === upper);
+    if (foundKey && typeof data[foundKey] === "object") return data[foundKey];
+    if (looksLikeValidAccountData(data, acc)) return data; 
+    return null;
+  }
+
+  async function tryScot(acc, sym){
+    const raw = await fetchJson(`${SCOT_API}/@${encodeURIComponent(acc)}?token=${encodeURIComponent(sym)}&hive=1`);
+    const inner = unwrapScotResponse(raw, sym, acc);
+    if (!inner) throw new Error("scot-api: empty or incompatible response");
+    return inner;
+  }
+
+  function extractRewardPoolId(config){
+    if (config == null) return null;
+    if (Array.isArray(config)) return extractRewardPoolId(config[0]);
+    if (typeof config !== "object") return null;
+    const direct = firstDefined(config.rewardPoolId, config.reward_pool_id, config.poolId, config.pool_id, config.id);
+    if (direct != null && !isNaN(Number(direct))) return Number(direct);
+    for (const k of Object.keys(config)){
+      const v = config[k];
+      if (v && typeof v === "object"){
+        const nested = extractRewardPoolId(v);
+        if (nested != null) return nested;
+      }
+    }
+    return null;
+  }
+
+  async function trySmtContract(acc, sym){
+    const config = globalConfigs.smt.find(c => c.token === sym) || await fetchJson(`${SMT_API}/config?token=${encodeURIComponent(sym)}`);
+    const poolId = extractRewardPoolId(config);
+    if (poolId == null) throw new Error("smt-api: rewardPoolId missing configuration setup");
+    const result = await postJson("https://api.hive-engine.com/rpc/contracts", {
+      jsonrpc: "2.0",
+      method: "findOne",
+      params: { contract: "comments", table: "votingPower", query: { rewardPoolId: poolId, account: acc } },
+      id: 0
+    });
+    if (!result) throw new Error("comments/votingPower: account record matching rewardpool missing context");
+    return { ...result, __rewardPoolId: poolId };
+  }
+
+  async function fetchAccountDataForTribe(acc, sym, apiHint){
+    const upper = sym.toUpperCase();
+    const attempts = [];
+    if (apiHint === "scot") attempts.push(["scot", tryScot]);
+    else if (apiHint === "smt") attempts.push(["smt", trySmtContract]);
+    else {
+      if (KNOWN_SMT.includes(upper)) { attempts.push(["smt", trySmtContract]); attempts.push(["scot", tryScot]); }
+      else if (KNOWN_SCOT.includes(upper)) { attempts.push(["scot", tryScot]); attempts.push(["smt", trySmtContract]); }
+      else { attempts.push(["scot", tryScot]); attempts.push(["smt", trySmtContract]); }
+    }
+
+    let lastErr = null;
+    for (const [apiName, fn] of attempts){
+      try{
+        const data = await fn(acc, upper);
+        return { api: apiName, accountData: data };
+      }catch(e){ lastErr = e; }
+    }
+    throw lastErr || new Error("Failed fetching records from endpoints");
+  }
+
+  // ---------- Voting Power Smart Calculators ----------
+  function firstDefined(...vals){
+    for (const v of vals) if (v !== undefined && v !== null) return v;
+    return null;
+  }
+  
+  function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
+
+  function formatWithPrecision(value, precision) {
+    if (value === undefined || value === null) return "0.00";
+    const p = parseInt(precision, 10);
+    const divisor = Math.pow(10, isNaN(p) ? 8 : p);
+    const num = Number(value) / divisor;
+    return num.toLocaleString(undefined, { 
+      minimumFractionDigits: isNaN(p) ? 2 : p, 
+      maximumFractionDigits: isNaN(p) ? 2 : p 
+    });
+  }
+
+  function calculateAutonomousVp(data, isDownvote = false) {
+    if (!data) return null;
+    
+    // 1. Gather baseline parameters
+    let baseVpRaw = isDownvote 
+      ? firstDefined(data.downvoting_power, data.downvotingPower, data.downvote_voting_power, data.down_vote_power, data.dvp)
+      : firstDefined(data.voting_power, data.votingPower, data.vp, data.voting_power_percent);
+      
+    if (baseVpRaw == null || isNaN(Number(baseVpRaw))) return null;
+    let currentVp = Number(baseVpRaw) > 100 ? Number(baseVpRaw) / 100 : Number(baseVpRaw);
+
+    // 2. Discover timeline anchors
+    let timeRaw = firstDefined(data.last_vote_time, data.lastVoteTime, data.last_vote, data.lastVoteTimestamp);
+    if (!timeRaw) return clamp(currentVp, 0, 100);
+
+    let lastVoteMs = 0;
+    if (typeof timeRaw === "number") {
+      lastVoteMs = timeRaw > 1e12 ? timeRaw : timeRaw * 1000;
+    } else if (typeof timeRaw === "string") {
+      let normalized = timeRaw;
+      if (!normalized.endsWith("Z") && !normalized.includes("+") && !normalized.includes("-")) {
+        normalized += "Z";
+      }
+      lastVoteMs = Date.parse(normalized);
+    }
+
+    if (!lastVoteMs || isNaN(lastVoteMs)) return clamp(currentVp, 0, 100);
+
+    // 3. Compute delta seconds and add the standard 20% regeneration power per day rule
+    // Formula: 20% / 86400 seconds = 0.00023148% recovery rate per second passed.
+    let elapsedSeconds = Math.max(0, (Date.now() - lastVoteMs) / 1000);
+    let regeneratedAmount = elapsedSeconds * (20 / 86400);
+    
+    return clamp(currentVp + regeneratedAmount, 0, 100);
+  }
+
+  function extractLastVoteTime(data){
+    if (!data) return null;
+    const raw = firstDefined(data.last_vote_time, data.lastVoteTime, data.last_vote, data.lastVoteTimestamp);
+    return formatTimestampMaybe(raw);
+  }
+
+  function formatTimestampMaybe(raw){
+    if (raw == null) return null;
+    if (typeof raw === "string") return raw;
+    if (typeof raw === "number"){
+      const ms = raw > 1e12 ? raw : raw * 1000;
+      try { return new Date(ms).toLocaleString(); } catch(e) { return String(raw); }
+    }
+    return String(raw);
+  }
+
+  function extractVoteWeightMultiplier(data){
+    if (!data) return null;
+    const raw = firstDefined(data.vote_weight_multiplier, data.voteWeightMultiplier);
+    if (raw == null || isNaN(Number(raw))) return null;
+    return Number(raw);
+  }
+
+  // ---------- Render Engines ----------
+  function timeAgo(ts){
+    if (!ts) return "never";
+    const diff = Date.now() - ts;
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return s + "s ago";
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + "m ago";
+    const h = Math.floor(m / 60);
+    return h + "h ago";
+  }
+
+  function apiBadge(api){
+    if (api === "scot") return `<span class="tribe-api-badge badge-scot">SCOT</span>`;
+    if (api === "smt") return `<span class="tribe-api-badge badge-smt">SMT</span>`;
+    return `<span class="tribe-api-badge badge-unknown">?</span>`;
+  }
+
+  function renderConfigBlock(sym, api) {
+    if (!globalConfigs[api] || globalConfigs[api].length === 0) return '';
+    const cfg = globalConfigs[api].find(c => c.token === sym);
+    if (!cfg) return '<div class="meta-text" style="margin-top:8px;">Additional configurations not loaded.</div>';
+    
+    let html = '<div class="config-grid">';
+    if (api === 'scot') {
+      html += `<div class="cfg-item"><span>Cashout Window</span>${cfg.cashout_window_days} days</div>`;
+      html += `<div class="cfg-item"><span>Curation Share</span>${(100 - (cfg.author_reward_percentage || 0))}%</div>`;
+      html += `<div class="cfg-item"><span>Author Share</span>${cfg.author_reward_percentage}%</div>`;
+      html += `<div class="cfg-item"><span>Staking Pool</span>${cfg.staking_pool_percentage}%</div>`;
+      if(cfg.downvote_regeneration_seconds) {
+         html += `<div class="cfg-item"><span>Downvote Regen</span>${(cfg.downvote_regeneration_seconds / 86400).toFixed(1)} days</div>`;
+      }
+    } else { 
+      html += `<div class="cfg-item"><span>Cashout Window</span>${cfg.cashout_window_days} days</div>`;
+      html += `<div class="cfg-item"><span>Curation Share</span>${cfg.curation_reward_percentage}%</div>`;
+      html += `<div class="cfg-item"><span>Vote Regen</span>${cfg.vote_regeneration_days} days</div>`;
+      html += `<div class="cfg-item"><span>Downvote Regen</span>${cfg.downvote_regeneration_days} days</div>`;
+    }
+    html += '</div>';
+
+    return `
+      <details class="raw">
+        <summary>⚙️ Tribe Engine Settings</summary>
+        ${html}
+      </details>
+    `;
+  }
+
+  function renderGrid(){
+    gridScot.innerHTML = "";
+    gridSmt.innerHTML = "";
+    emptyState.style.display = tribes.length === 0 ? "block" : "none";
+
+    tribes.forEach(t => {
+      const sym = t.symbol.toUpperCase();
+      const key = account ? cacheKey(sym, account) : null;
+      const entry = key ? cache[key] : null;
+
+      const card = document.createElement("div");
+      card.className = "card tribe-card";
+      card.dataset.symbol = sym;
+
+      let targetGrid = gridScot; 
+      if (entry && entry.api === "smt") targetGrid = gridSmt;
+      else if (t.apiHint === "smt" || KNOWN_SMT.includes(sym)) targetGrid = gridSmt;
+
+      if (!account){
+        card.innerHTML = `
+          <div class="tribe-head">
+            <span class="tribe-symbol">${sym}</span>
+            <div class="meta-actions"><button class="btn-icon danger" data-action="remove" title="Remove">✕</button></div>
+          </div>
+          <div class="status-line err">Provide a Hive account name above to compute parameters.</div>
+        `;
+        targetGrid.appendChild(card);
+        attachCardEvents(card, sym);
+        return;
+      }
+
+      if (!entry || entry.loading){
+        card.innerHTML = renderLoadingBody(sym, entry ? entry.api : t.apiHint);
+        targetGrid.appendChild(card);
+        attachCardEvents(card, sym);
+        return;
+      }
+
+      if (entry.error){
+        card.innerHTML = `
+          <div class="tribe-head">
+            <span class="tribe-symbol">${sym}</span>
+            <div class="meta-actions">
+              <button class="btn-icon" data-action="refresh" title="Retry Endpoint">⟳</button>
+              <button class="btn-icon danger" data-action="remove" title="Remove">✕</button>
+            </div>
+          </div>
+          <div class="status-line err">Error: ${escapeHtml(entry.error)}</div>
+          <div class="meta-row">
+            <span class="meta-text">Last connection attempt: ${timeAgo(entry.timestamp)}</span>
+          </div>
+        `;
+        targetGrid.appendChild(card);
+        attachCardEvents(card, sym);
+        return;
+      }
+
+      // Autonomous calculations factoring timeline math directly
+      const vp = calculateAutonomousVp(entry.accountData, false);
+      const dvp = calculateAutonomousVp(entry.accountData, true);
+      const lastVote = extractLastVoteTime(entry.accountData);
+      
+      // Pull token information from memory pools
+      const infoObj = globalTokenInfos[entry.api][sym];
+      const name = infoObj ? (infoObj.name || infoObj.symbol_name) : null;
+      const isStale = (Date.now() - entry.timestamp) > ttlMs;
+
+      let postingTagHtml = "";
+      if(entry.api === "scot" && globalConfigs.scot.length > 0) {
+        const scotCfg = globalConfigs.scot.find(c => c.token === sym);
+        if(scotCfg && scotCfg.json_metadata_value) {
+          postingTagHtml = `<div class="status-line ok" style="margin-bottom:8px;"><b>Posting Tag:</b> <code style="background:var(--bg-2); padding:2px 6px; border-radius:4px; color:var(--accent-warn);">${escapeHtml(scotCfg.json_metadata_value)}</code></div>`;
+        }
+      }
+
+      // Financial stats metrics grid (SCOT exclusive)
+      let tokenStatsHtml = "";
+      if (entry.api === "scot") {
+        const precision = entry.accountData.precision ?? 8;
+        const stakedFormatted = formatWithPrecision(entry.accountData.staked_tokens, precision);
+        const pendingFormatted = formatWithPrecision(entry.accountData.pending_token, precision);
+        const earnedFormatted = formatWithPrecision(entry.accountData.earned_token, precision);
+
+        tokenStatsHtml = `
+          <div class="token-stats-grid">
+            <div class="stat-item">
+              <span>Stake</span>
+              <span style="color: var(--accent);">${stakedFormatted}</span>
+            </div>
+            <div class="stat-item">
+              <span>Pending</span>
+              <span style="color: var(--accent-warn);">${pendingFormatted}</span>
+            </div>
+            <div class="stat-item">
+              <span>Earned</span>
+              <span style="color: var(--accent-2);">${earnedFormatted}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        <div class="tribe-head">
+          <span class="tribe-symbol">${sym}</span>
+          ${apiBadge(entry.api)}
+        </div>
+        <div class="tribe-name">${name ? escapeHtml(name) : "&nbsp;"}</div>
+
+        ${postingTagHtml}
+
+        <div class="vp-block">
+          <div class="vp-label-row">
+            <span class="vp-label">Voting Power (Live Auto-Regen)</span>
+            <span class="${vp == null ? 'vp-value na' : 'vp-value'}" style="color:var(--accent);">${vp == null ? 'N/A' : vp.toFixed(2) + '%'}</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill up" style="width:${vp == null ? 0 : vp}%"></div></div>
+        </div>
+
+        <div class="vp-block">
+          <div class="vp-label-row">
+            <span class="vp-label">Downvote Power (Live Auto-Regen)</span>
+            <span class="${dvp == null ? 'vp-value na' : 'vp-value'}">${dvp == null ? 'N/A' : dvp.toFixed(2) + '%'}</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill down" style="width:${dvp == null ? 0 : dvp}%"></div></div>
+        </div>
+
+        ${tokenStatsHtml}
+
+        <div class="status-line ok">Last Activity Saved: ${lastVote ? escapeHtml(String(lastVote)) : "Never"}</div>
+
+        ${entry.api === "scot" ? renderVwmBlock(sym, extractVoteWeightMultiplier(entry.accountData)) : ""}
+
+        ${renderConfigBlock(sym, entry.api)}
+        
+        <details class="raw">
+          <summary>🔍 Inspect Raw JSON Response</summary>
+          <pre>${escapeHtml(JSON.stringify(entry.accountData, null, 2))}</pre>
+        </details>
+
+        <div class="meta-row">
+          <span class="meta-text">${isStale ? "Cache Expired • " : ""}Updated ${timeAgo(entry.timestamp)}</span>
+          <div class="meta-actions">
+            <button class="btn-icon" data-action="refresh" title="Refresh Now">⟳</button>
+            <button class="btn-icon danger" data-action="remove" title="Remove Tracking">✕</button>
+          </div>
+        </div>
+      `;
+      targetGrid.appendChild(card);
+      attachCardEvents(card, sym);
+    });
+  }
+
+  function renderVwmBlock(sym, currentValue){
+    return `
+      <div class="vwm-block">
+        <div class="vp-label-row">
+          <span class="vp-label">Vote Weight Multiplier</span>
+          <span class="${currentValue == null ? 'vp-value na' : 'vp-value'}">${currentValue == null ? 'N/A' : currentValue + 'x'}</span>
+        </div>
+        <div class="row" style="gap:6px; align-items:center;">
+          <input type="text" inputmode="decimal" class="vwm-input" placeholder="Ex: 4" data-symbol="${sym}">
+          <button class="btn-ghost btn-sm" data-action="setVwm" data-symbol="${sym}">Set via Keychain</button>
+        </div>
+        <div class="vwm-hint">Executes custom JSON broadcasting <code>scot_set_vote</code> on your posting authority.</div>
+        <div class="status-line vwm-status" data-symbol="${sym}"></div>
+      </div>
+    `;
+  }
+
+  function renderLoadingBody(sym, api){
+    return `
+      <div class="tribe-head">
+        <span class="tribe-symbol">${sym}</span>
+        ${api ? apiBadge(api) : '<span class="skeleton" style="width:60px;height:16px;"></span>'}
+      </div>
+      <div class="skeleton" style="width:70%;height:12px;margin-bottom:14px;"></div>
+      <div class="skeleton" style="width:100%;height:8px;margin-bottom:16px;"></div>
+      <div class="skeleton" style="width:100%;height:8px;margin-bottom:16px;"></div>
+      <div class="skeleton" style="width:50%;height:10px;"></div>
+    `;
+  }
+
+  // ---------- ALL TRIBES SEPARATE DIRECTORY PAGE RENDER ----------
+  function renderDirectory() {
+    const filterText = dirSearchInput.value.trim().toLowerCase();
+    directoryList.innerHTML = "";
+
+    const itemsToRender = [];
+
+    // Map SCOT items
+    if (activeDirectoryFilter === "all" || activeDirectoryFilter === "scot") {
+      globalConfigs.scot.forEach(item => {
+        if(!item.token) return;
+        itemsToRender.push({ 
+          symbol: item.token.toUpperCase(), 
+          type: 'scot', 
+          detail: item.json_metadata_value ? `Tag: ${item.json_metadata_value}` : 'Legacy Engine parameters' 
+        });
+      });
+    }
+
+    // Map SMT items
+    if (activeDirectoryFilter === "all" || activeDirectoryFilter === "smt") {
+      globalConfigs.smt.forEach(item => {
+        if(!item.token) return;
+        // Avoid dual network rendering duplications
+        if(activeDirectoryFilter === "all" && itemsToRender.some(i => i.symbol === item.token.toUpperCase())) return;
+        itemsToRender.push({ 
+          symbol: item.token.toUpperCase(), 
+          type: 'smt', 
+          detail: `Reward Pool Key: ${item.reward_pool_id || 'Contract Based'}` 
+        });
+      });
+    }
+
+    itemsToRender.sort((a,b) => a.symbol.localeCompare(b.symbol));
+
+    itemsToRender.forEach(item => {
+      if(filterText && !item.symbol.toLowerCase().includes(filterText) && !item.detail.toLowerCase().includes(filterText)) {
+        return;
+      }
+
+      const div = document.createElement("div");
+      div.className = "card directory-item";
+      
+      const isAlreadyTracked = tribes.some(t => t.symbol.toUpperCase() === item.symbol);
+
+      div.innerHTML = `
+        <div class="directory-head">
+          <span class="tribe-symbol">${item.symbol}</span>
+          ${apiBadge(item.type)}
+        </div>
+        <div class="meta-text" style="margin-bottom: 6px; font-family:monospace;">${escapeHtml(item.detail)}</div>
+        <button class="btn-primary btn-sm" data-dir-symbol="${item.symbol}" data-dir-type="${item.type}" ${isAlreadyTracked ? 'disabled' : ''}>
+          ${isAlreadyTracked ? '✓ Added' : '+ Add to Dashboard'}
+        </button>
+      `;
+
+      directoryList.appendChild(div);
+
+      const btn = div.querySelector('button');
+      btn.addEventListener('click', () => {
+        if (tribes.some(t => t.symbol.toUpperCase() === item.symbol)) return;
+        tribes.push({ symbol: item.symbol, apiHint: item.type });
+        persistTribes();
+        btn.disabled = true;
+        btn.textContent = "✓ Added";
+        renderGrid();
+        loadTribe(item.symbol, false);
+      });
+    });
+
+    if(directoryList.children.length === 0) {
+      directoryList.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">No records discovered matching: "${escapeHtml(filterText)}" inside current segment.</div>`;
+    }
+  }
+
+  dirSearchInput.addEventListener('input', renderDirectory);
+
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
+  function attachCardEvents(card, sym){
+    const refreshBtn = card.querySelector('[data-action="refresh"]');
+    const removeBtn = card.querySelector('[data-action="remove"]');
+    const vwmBtn = card.querySelector('[data-action="setVwm"]');
+    if (refreshBtn) refreshBtn.addEventListener("click", () => loadTribe(sym, true));
+    if (removeBtn) removeBtn.addEventListener("click", () => removeTribe(sym));
+    if (vwmBtn) vwmBtn.addEventListener("click", () => submitVoteWeightMultiplier(sym, card));
+  }
+
+  function submitVoteWeightMultiplier(sym, card){
+    const input = card.querySelector(".vwm-input");
+    const statusEl = card.querySelector(".vwm-status");
+    const val = parseFloat(input.value);
+
+    if (!account){
+      statusEl.textContent = "Please save a valid Hive account context first.";
+      statusEl.className = "status-line vwm-status err";
+      return;
+    }
+    if (isNaN(val) || val <= 0){
+      statusEl.textContent = "Provide a positive value (e.g. 4).";
+      statusEl.className = "status-line vwm-status err";
+      return;
+    }
+    if (!window.hive_keychain){
+      statusEl.textContent = "Hive Keychain browser extension signature not found.";
+      statusEl.className = "status-line vwm-status err";
+      return;
+    }
+
+    statusEl.textContent = "Awaiting transaction authorization…";
+    statusEl.className = "status-line vwm-status ok";
+
+    const json = { symbol: sym, vote_weight_multiplier: val };
+    window.hive_keychain.requestCustomJson(
+      account, "scot_set_vote", "Posting", JSON.stringify(json),
+      `Modify Multiplier for ${sym} to ${val}x`,
+      (response) => {
+        if (response && response.success){
+          const txId = response.result && response.result.id ? response.result.id : null;
+          statusEl.textContent = "Success" + (txId ? " — tx " + txId.slice(0, 10) + "…" : "") + "!";
+          statusEl.className = "status-line vwm-status ok";
+          setTimeout(() => loadTribe(sym, true), 5000);
+        } else {
+          statusEl.textContent = "Keychain error: " + ((response && response.message) || "Rejected");
+          statusEl.className = "status-line vwm-status err";
+        }
+      }
+    );
+  }
+
+  // ---------- Control Logic Methods ----------
+  async function loadTribe(sym, force){
+    if (!account) { renderGrid(); return; }
+    const key = cacheKey(sym, account);
+    const existing = cache[key];
+
+    if (!force && existing && !existing.error && !existing.loading){
+      const age = Date.now() - existing.timestamp;
+      if (age < ttlMs) { renderGrid(); return; } 
+    }
+
+    const tribeMeta = tribes.find(t => t.symbol.toUpperCase() === sym) || {};
+    cache[key] = { ...(cache[key] || {}), loading: true, api: tribeMeta.apiHint || (existing && existing.api) };
+    persistCache();
+    renderGrid();
+
+    try{
+      const { api, accountData } = await fetchAccountDataForTribe(account, sym, tribeMeta.apiHint);
+      cache[key] = { api, accountData, timestamp: Date.now(), loading: false, error: null };
+    }catch(e){
+      cache[key] = { ...(cache[key] || {}), loading: false, error: (e && e.message) || "Unknown request failure", timestamp: Date.now() };
+    }
+    persistCache();
+    renderGrid();
+  }
+
+  async function loadAll(force){
+    if (!account || tribes.length === 0) { renderGrid(); return; }
+    refreshAllBtn.disabled = true;
+    refreshAllIcon.classList.add("spin");
+    await Promise.all(tribes.map(t => loadTribe(t.symbol.toUpperCase(), force)));
+    refreshAllBtn.disabled = false;
+    refreshAllIcon.classList.remove("spin");
+  }
+
+  function addTribe(){
+    const sym = symbolInput.value.trim().toUpperCase();
+    if (!sym) return;
+    if (tribes.some(t => t.symbol.toUpperCase() === sym)){
+      symbolInput.value = ""; return;
+    }
+    const apiHint = apiHintInput.value || null;
+    tribes.push({ symbol: sym, apiHint });
+    persistTribes();
+    symbolInput.value = ""; apiHintInput.value = "";
+    
+    if (apiHint === 'smt' || KNOWN_SMT.includes(sym)){
+       tabBtns[1].click();
+    } else {
+       tabBtns[0].click();
+    }
+    
+    renderGrid();
+    renderDirectory();
+    loadTribe(sym, false);
+  }
+
+  function removeTribe(sym){
+    tribes = tribes.filter(t => t.symbol.toUpperCase() !== sym);
+    persistTribes();
+    if (account){
+      const key = cacheKey(sym, account);
+      delete cache[key];
+      persistCache();
+    }
+    renderGrid();
+    renderDirectory();
+  }
+
+  function saveAccount(){
+    const val = accountInput.value.trim().toLowerCase();
+    account = val;
+    persistAccount();
+    renderGrid();
+    if (account) loadAll(false);
+  }
+
+  // ---------- Event Listeners ----------
+  saveAccountBtn.addEventListener("click", saveAccount);
+  accountInput.addEventListener("keydown", e => { if (e.key === "Enter") saveAccount(); });
+
+  addTribeBtn.addEventListener("click", addTribe);
+  symbolInput.addEventListener("keydown", e => { if (e.key === "Enter") addTribe(); });
+
+  refreshAllBtn.addEventListener("click", () => loadAll(true));
+
+  cacheTtlSelect.addEventListener("change", () => {
+    ttlMs = parseInt(cacheTtlSelect.value, 10);
+    persistTtl();
+    renderGrid();
+  });
+
+  // Periodically refresh the visual bars on screen to simulate the 20%/day tick visually
+  setInterval(() => {
+    if (account && tribes.length > 0) {
+      const keys = Object.keys(cache);
+      let holdsActiveData = keys.some(k => cache[k] && !cache[k].loading && !cache[k].error);
+      if (holdsActiveData) {
+        renderGrid();
+      }
+    }
+  }, 15000);
+
+  // ---------- Application Boot ----------
+  (async function init(){
+    await loadBulkMetadataAndConfigs();
+    renderGrid();
+    if (account && tribes.length > 0) loadAll(false);
+  })();
+
+})();
+</script>
+</body>
+</html>
